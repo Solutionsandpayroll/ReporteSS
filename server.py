@@ -3,7 +3,7 @@ Servidor local — Automatización SS
 Ejecutar: python server.py
 Abrir:    http://localhost:5000
 """
-import io, os, copy, traceback
+import io, os, copy, traceback, time
 from datetime import date
 from flask import Flask, request, send_file, jsonify, send_from_directory
 import openpyxl
@@ -13,7 +13,137 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 app  = Flask(__name__, static_folder=BASE)
 
 # ─── Maestro ──────────────────────────────────────────────────────────────────
-MAESTRO = {
+# URL de descarga directa del Excel en OneDrive. Configura la variable de entorno
+# MAESTRO_URL con el enlace de compartir de OneDrive (1drv.ms o sharepoint.com).
+# Si no se configura, se intenta leer maestro.xlsx local; si no existe, se usa
+# el diccionario estático de abajo.
+MAESTRO_URL = os.environ.get("MAESTRO_URL", "")
+
+MAESTRO_CACHE_TTL = 300          # segundos entre recargas (5 min)
+_maestro_cache      = None
+_maestro_cache_time = 0.0
+
+
+def _onedrive_to_download(url: str) -> str:
+    """Convierte un enlace de compartir de OneDrive a URL de descarga directa."""
+    import base64
+    # OneDrive personal (1drv.ms / onedrive.live.com) → API de shares
+    if "1drv.ms" in url or "onedrive.live.com" in url:
+        token = base64.urlsafe_b64encode(("u!" + url).encode()).decode().rstrip("=")
+        return f"https://api.onedrive.com/v1.0/shares/{token}/root/content"
+    # OneDrive Business / SharePoint → añadir download=1
+    if "sharepoint.com" in url:
+        sep = "&" if "?" in url else "?"
+        return url + sep + "download=1"
+    return url  # asumir que ya es descarga directa
+
+
+def _parse_maestro_xlsx(file_obj) -> dict:
+    """Lee el Excel maestro de personal.
+
+    Busca la fila de cabecera escaneando hasta la fila 10 (el archivo real
+    tiene un título en fila 1 y la cabecera en fila 3). Las columnas se
+    detectan por el texto del encabezado:
+      CODIGO EMPLEADO → código  |  EPS → eps  |  AFP → afp
+    Si no encuentra cabecera, usa posiciones conocidas: B=1, F=5, G=6.
+    """
+    wb = load_workbook(file_obj, data_only=True, read_only=True)
+    ws = wb.active
+
+    # Leer hasta fila 10 buscando la fila de cabecera
+    header_row_idx = None
+    idx_cod = idx_eps = idx_afp = None
+
+    all_rows = list(ws.iter_rows(min_row=1, max_row=ws.max_row, values_only=True))
+
+    for i, row in enumerate(all_rows[:10]):
+        heads = [str(c).strip().lower() if c else "" for c in row]
+        if any("codigo" in h or "eps" in h for h in heads):
+            header_row_idx = i
+            for j, h in enumerate(heads):
+                if "codigo" in h or "cód" in h:
+                    idx_cod = j
+                elif "eps" in h or "salud" in h:
+                    idx_eps = j
+                elif "afp" in h or "pension" in h or "pensión" in h:
+                    idx_afp = j
+            break
+
+    # Fallback a posiciones fijas del archivo real (B=1, F=5, G=6)
+    if header_row_idx is None: header_row_idx = 2  # fila 3, índice 2
+    if idx_cod is None: idx_cod = 1
+    if idx_eps is None: idx_eps = 5
+    if idx_afp is None: idx_afp = 6
+
+    maestro = {}
+    for row in all_rows[header_row_idx + 1:]:
+        if len(row) <= max(idx_cod, idx_eps, idx_afp):
+            continue
+        raw_cod, raw_eps, raw_afp = row[idx_cod], row[idx_eps], row[idx_afp]
+        if not raw_cod:
+            continue
+        s = str(raw_cod).strip().replace(" ", "")
+        if not s.isdigit():
+            continue
+        codigo = s.zfill(6)
+        eps    = str(raw_eps).strip().upper() if raw_eps else ""
+        afp    = str(raw_afp).strip().upper() if raw_afp else ""
+        if codigo and eps and afp:
+            maestro[codigo] = {"eps": eps, "afp": afp}
+
+    wb.close()
+    return maestro
+
+
+def load_maestro() -> dict:
+    """Devuelve el maestro de empleados con caché de 5 min.
+
+    Orden de prioridad:
+      1. OneDrive (si MAESTRO_URL está configurado)
+      2. maestro.xlsx local
+      3. Diccionario estático
+    """
+    global _maestro_cache, _maestro_cache_time
+    if _maestro_cache is not None and (time.time() - _maestro_cache_time) < MAESTRO_CACHE_TTL:
+        return _maestro_cache
+
+    import requests as _req
+
+    maestro = None
+
+    # 1) OneDrive
+    if MAESTRO_URL:
+        try:
+            url  = _onedrive_to_download(MAESTRO_URL)
+            resp = _req.get(url, timeout=15)
+            resp.raise_for_status()
+            maestro = _parse_maestro_xlsx(io.BytesIO(resp.content))
+            print(f"Maestro cargado desde OneDrive: {len(maestro)} empleados")
+        except Exception as exc:
+            print(f"Advertencia: no se pudo cargar maestro desde OneDrive: {exc}")
+
+    # 2) Archivo local
+    if maestro is None:
+        local = os.path.join(BASE, "maestro.xlsx")
+        if os.path.exists(local):
+            try:
+                with open(local, "rb") as fh:
+                    maestro = _parse_maestro_xlsx(fh)
+                print(f"Maestro cargado desde archivo local: {len(maestro)} empleados")
+            except Exception as exc:
+                print(f"Advertencia: no se pudo leer maestro.xlsx local: {exc}")
+
+    # 3) Dict estático
+    if maestro is None:
+        maestro = MAESTRO_ESTATICO
+        print(f"Maestro: usando diccionario estatico ({len(maestro)} empleados)")
+
+    _maestro_cache      = maestro
+    _maestro_cache_time = time.time()
+    return maestro
+
+
+MAESTRO_ESTATICO = {
     "040267": {"eps": "ALIANSALUD EPS",                                     "afp": "ADMINISTRADORA COLOMBIANA DE PENSIONES COLPENSIONES"},
     "052231": {"eps": "E.P.S SANITAS",                                      "afp": "ADMINISTRADORA COLOMBIANA DE PENSIONES COLPENSIONES"},
     "054755": {"eps": "E.P.S SANITAS",                                      "afp": "OLD MUTUAL FONDO DE PENSIONES OBLIGATORIAS"},
@@ -171,7 +301,7 @@ def process():
         for f1r in emp_rows:
             raw_code = get_val(ws1, 2, f1r)
             code = normalize_code(raw_code)
-            master = MAESTRO.get(code)
+            master = load_maestro().get(code)
 
             eps = master["eps"].upper() if master else None
             afp = master["afp"].upper() if master else None
