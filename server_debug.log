@@ -1,0 +1,104 @@
+=======================================================
+  Servidor SS iniciado en http://localhost:5000
+  Presiona Ctrl+C para detener
+=======================================================
+ * Serving Flask app 'server'
+ * Debug mode: off
+Maestro cargado desde archivo local: 25 empleados
+[DEBUG] SS code=040267 eps='ALIANSALUD EPS' canonical='ALIANSALUD' sc=29 v_salud=684504
+[DEBUG] SS code=077911 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=251894
+[DEBUG] SS code=081214 eps='COMPENSAR ENTIDAD PROMOTORA DE SALUD' canonical='COMPENSAR' sc=33 v_salud=96107
+[DEBUG] SS code=078082 eps='EPS SURA' canonical='SURA' sc=30 v_salud=318759
+[DEBUG] SS code=076845 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=137223
+[DEBUG] SS code=075828 eps='SALUD TOTAL S.A.' canonical='SALUD TOTAL' sc=31 v_salud=453587
+[DEBUG] SS code=075064 eps='EPS SURA' canonical='SURA' sc=30 v_salud=250841
+[DEBUG] SS code=058834 eps='NUEVA EPS' canonical='NUEVA EPS' sc=35 v_salud=126405
+[DEBUG] SS code=078111 eps='EPS SURA' canonical='SURA' sc=30 v_salud=274080
+[DEBUG] SS code=077201 eps='ALIANSALUD EPS' canonical='ALIANSALUD' sc=29 v_salud=587255
+[DEBUG] SS code=056374 eps='FAMISANAR' canonical='FAMISANAR' sc=34 v_salud=140809
+[DEBUG] SS code=054755 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=777144
+[DEBUG] SS code=062858 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=348685
+[DEBUG] SS code=075157 eps='EPS SURA' canonical='SURA' sc=30 v_salud=251986
+[DEBUG] SS code=076575 eps='MUTUAL SER' canonical='MUTUAL' sc=36 v_salud=99090
+[DEBUG] SS code=074173 eps='EPS SURA' canonical='SURA' sc=30 v_salud=393919
+[DEBUG] SS code=059288 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=103759
+[DEBUG] SS code=073226 eps='COMPENSAR ENTIDAD PROMOTORA DE SALUD' canonical='COMPENSAR' sc=33 v_salud=190949
+[DEBUG] SS code=055512 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=684578
+[DEBUG] SS code=073931 eps='EPS SURA' canonical='SURA' sc=30 v_salud=394518
+[DEBUG] SS code=077659 eps='FAMISANAR' canonical='FAMISANAR' sc=34 v_salud=330468
+[DEBUG] SS code=075115 eps='FAMISANAR' canonical='FAMISANAR' sc=34 v_salud=433438
+[DEBUG] SS code=052231 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=738774
+[DEBUG] SS code=074490 eps='EPS SURA' canonical='SURA' sc=30 v_salud=457467
+[DEBUG] SS code=056918 eps='SALUD TOTAL S.A.' canonical='SALUD TOTAL' sc=31 v_salud=900411
+Maestro cargado desde archivo local: 25 empleados
+[DEBUG] SS code=040267 eps='ALIANSALUD EPS' canonical='ALIANSALUD' sc=29 v_salud=684504
+[DEBUG] SS code=077911 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=251894
+[DEBUG] SS code=081214 eps='COMPENSAR ENTIDAD PROMOTORA DE SALUD' canonical='COMPENSAR' sc=33 v_salud=96107
+[DEBUG] SS code=078082 eps='EPS SURA' canonical='SURA' sc=30 v_salud=318759
+[DEBUG] SS code=076845 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=137223
+[DEBUG] SS code=075828 eps='SALUD TOTAL S.A.' canonical='SALUD TOTAL' sc=31 v_salud=453587
+[DEBUG] SS code=075064 eps='EPS SURA' canonical='SURA' sc=30 v_salud=250841
+[DEBUG] SS code=058834 eps='NUEVA EPS' canonical='NUEVA EPS' sc=35 v_salud=126405
+[DEBUG] SS code=078111 eps='EPS SURA' canonical='SURA' sc=30 v_salud=274080
+[DEBUG] SS code=077201 eps='ALIANSALUD EPS' canonical='ALIANSALUD' sc=29 v_salud=587255
+[DEBUG] SS code=056374 eps='FAMISANAR' canonical='FAMISANAR' sc=34 v_salud=140809
+[DEBUG] SS code=054755 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=777144
+[DEBUG] SS code=062858 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=348685
+[DEBUG] SS code=075157 eps='EPS SURA' canonical='SURA' sc=30 v_salud=251986
+[DEBUG] SS code=076575 eps='MUTUAL SER' canonical='MUTUAL' sc=36 v_salud=99090
+[DEBUG] SS code=074173 eps='EPS SURA' canonical='SURA' sc=30 v_salud=393919
+[DEBUG] SS code=059288 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=103759
+[DEBUG] SS code=073226 eps='COMPENSAR ENTIDAD PROMOTORA DE SALUD' canonical='COMPENSAR' sc=33 v_salud=190949
+[DEBUG] SS code=055512 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=684578
+[DEBUG] SS code=073931 eps='EPS SURA' canonical='SURA' sc=30 v_salud=394518
+[DEBUG] SS code=077659 eps='FAMISANAR' canonical='FAMISANAR' sc=34 v_salud=330468
+[DEBUG] SS code=075115 eps='FAMISANAR' canonical='FAMISANAR' sc=34 v_salud=433438
+[DEBUG] SS code=052231 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=738774
+[DEBUG] SS code=074490 eps='EPS SURA' canonical='SURA' sc=30 v_salud=457467
+[DEBUG] SS code=056918 eps='SALUD TOTAL S.A.' canonical='SALUD TOTAL' sc=31 v_salud=900411
+[DEBUG] SS code=040267 eps='ALIANSALUD EPS' canonical='ALIANSALUD' sc=29 v_salud=682359
+[DEBUG] SS code=077911 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=274656
+[DEBUG] SS code=081214 eps='COMPENSAR ENTIDAD PROMOTORA DE SALUD' canonical='COMPENSAR' sc=33 v_salud=96379
+[DEBUG] SS code=078082 eps='EPS SURA' canonical='SURA' sc=30 v_salud=305198
+[DEBUG] SS code=076845 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=143549
+[DEBUG] SS code=075828 eps='SALUD TOTAL S.A.' canonical='SALUD TOTAL' sc=31 v_salud=496311
+[DEBUG] SS code=075064 eps='EPS SURA' canonical='SURA' sc=30 v_salud=240536
+[DEBUG] SS code=058834 eps='NUEVA EPS' canonical='NUEVA EPS' sc=35 v_salud=171695
+[DEBUG] SS code=078111 eps='EPS SURA' canonical='SURA' sc=30 v_salud=271193
+[DEBUG] SS code=072948 eps='None' canonical='' sc=None v_salud=745224
+[DEBUG] SS code=077201 eps='ALIANSALUD EPS' canonical='ALIANSALUD' sc=29 v_salud=560571
+[DEBUG] SS code=056374 eps='FAMISANAR' canonical='FAMISANAR' sc=34 v_salud=173889
+[DEBUG] SS code=054755 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=745219
+[DEBUG] SS code=062858 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=332126
+[DEBUG] SS code=075157 eps='EPS SURA' canonical='SURA' sc=30 v_salud=395477
+[DEBUG] SS code=076575 eps='MUTUAL SER' canonical='MUTUAL' sc=36 v_salud=156691
+[DEBUG] SS code=074173 eps='EPS SURA' canonical='SURA' sc=30 v_salud=377163
+[DEBUG] SS code=059288 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=178170
+[DEBUG] SS code=073226 eps='COMPENSAR ENTIDAD PROMOTORA DE SALUD' canonical='COMPENSAR' sc=33 v_salud=166042
+[DEBUG] SS code=055512 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=684578
+[DEBUG] SS code=073931 eps='EPS SURA' canonical='SURA' sc=30 v_salud=377163
+[DEBUG] SS code=077659 eps='FAMISANAR' canonical='FAMISANAR' sc=34 v_salud=316411
+[DEBUG] SS code=075115 eps='FAMISANAR' canonical='FAMISANAR' sc=34 v_salud=361198
+[DEBUG] SS code=052231 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=709506
+[DEBUG] SS code=074490 eps='EPS SURA' canonical='SURA' sc=30 v_salud=441359
+[DEBUG] SS code=056918 eps='SALUD TOTAL S.A.' canonical='SALUD TOTAL' sc=31 v_salud=859499
+[DEBUG] SS code=040267 eps='ALIANSALUD EPS' canonical='ALIANSALUD' sc=29 v_salud=684504
+[DEBUG] SS code=077911 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=251894
+[DEBUG] SS code=081214 eps='COMPENSAR ENTIDAD PROMOTORA DE SALUD' canonical='COMPENSAR' sc=33 v_salud=96107
+[DEBUG] SS code=078082 eps='EPS SURA' canonical='SURA' sc=30 v_salud=318759
+[DEBUG] SS code=076845 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=137223
+[DEBUG] SS code=075828 eps='SALUD TOTAL S.A.' canonical='SALUD TOTAL' sc=31 v_salud=453587
+[DEBUG] SS code=075064 eps='EPS SURA' canonical='SURA' sc=30 v_salud=250841
+[DEBUG] SS code=058834 eps='NUEVA EPS' canonical='NUEVA EPS' sc=35 v_salud=126405
+[DEBUG] SS code=078111 eps='EPS SURA' canonical='SURA' sc=30 v_salud=274080
+[DEBUG] SS code=077201 eps='ALIANSALUD EPS' canonical='ALIANSALUD' sc=29 v_salud=587255
+[DEBUG] SS code=056374 eps='FAMISANAR' canonical='FAMISANAR' sc=34 v_salud=140809
+[DEBUG] SS code=054755 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=777144
+[DEBUG] SS code=062858 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=348685
+[DEBUG] SS code=075157 eps='EPS SURA' canonical='SURA' sc=30 v_salud=251986
+[DEBUG] SS code=076575 eps='MUTUAL SER' canonical='MUTUAL' sc=36 v_salud=99090
+[DEBUG] SS code=074173 eps='EPS SURA' canonical='SURA' sc=30 v_salud=393919
+[DEBUG] SS code=059288 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=103759
+[DEBUG] SS code=073226 eps='COMPENSAR ENTIDAD PROMOTORA DE SALUD' canonical='COMPENSAR' sc=33 v_salud=190949
+[DEBUG] SS code=055512 eps='E.P.S SANITAS' canonical='SANITAS' sc=32 v_salud=684578
+[DEBUG] SS code=073931 eps='EPS SURA' canonical='SURA' sc=30 v_salud=394518
