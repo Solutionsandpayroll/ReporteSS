@@ -3,7 +3,7 @@ Servidor local — Automatización SS
 Ejecutar: python server.py
 Abrir:    http://localhost:5000
 """
-import io, os, copy, traceback, time
+import io, os, copy, traceback, time, re, unicodedata
 from datetime import date
 from flask import Flask, request, send_file, jsonify, send_from_directory
 import openpyxl
@@ -222,6 +222,195 @@ def get_val(ws, col, row):
 def set_val(ws, col, row, value):
     ws.cell(row=row, column=col).value = value
 
+
+def normalize_text(v):
+    if v is None:
+        return ""
+    s = str(v).strip().upper()
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(ch for ch in s if not unicodedata.combining(ch))
+    s = re.sub(r"[^A-Z0-9]+", " ", s)
+    return " ".join(s.split())
+
+
+def detect_header_rows(ws):
+    """Detecta fila de encabezados base (código/nombre) y de conceptos (fila de títulos)."""
+    max_scan = min(ws.max_row, 40)
+    concept_row = None
+
+    # Preferencia: fila que explícitamente tenga 002205 y 999901
+    for r in range(1, max_scan + 1):
+        row_text = " | ".join(
+            normalize_text(ws.cell(row=r, column=c).value)
+            for c in range(1, ws.max_column + 1)
+            if ws.cell(row=r, column=c).value not in (None, "")
+        )
+        if "002205" in row_text and "999901" in row_text:
+            concept_row = r
+            break
+
+    # Fallback: mejor score por cantidad de conceptos numéricos
+    if concept_row is None:
+        best_score = -1
+        for r in range(1, max_scan + 1):
+            meaningful = 0
+            code_like = 0
+            for c in range(1, ws.max_column + 1):
+                v = ws.cell(row=r, column=c).value
+                if v is None:
+                    continue
+                t = normalize_text(v)
+                if not t or t == "VALOR":
+                    continue
+                meaningful += 1
+                if re.search(r"\b\d{5,6}\b", t):
+                    code_like += 1
+            score = (code_like * 3) + meaningful
+            if score > best_score:
+                best_score = score
+                concept_row = r
+
+    base_row = None
+    for r in range(max(1, concept_row - 6), concept_row + 1):
+        texts = [
+            normalize_text(ws.cell(row=r, column=c).value)
+            for c in range(1, ws.max_column + 1)
+            if ws.cell(row=r, column=c).value not in (None, "")
+        ]
+        line = " | ".join(texts)
+        if "CODIGO" in line and "NOMBRE" in line:
+            base_row = r
+            break
+
+    if base_row is None:
+        base_row = max(1, concept_row - 1)
+
+    return base_row, concept_row
+
+
+def build_row_title_map(ws, row):
+    """normalized_title -> col"""
+    out = {}
+    for c in range(1, ws.max_column + 1):
+        v = ws.cell(row=row, column=c).value
+        t = normalize_text(v)
+        if not t or t == "VALOR":
+            continue
+        if t not in out:
+            out[t] = c
+    return out
+
+
+def build_concept_code_map(title_map):
+    """code(6 dígitos) -> col tomando el primer código que aparezca en el título."""
+    out = {}
+    for title, col in title_map.items():
+        m = re.search(r"\b(\d{6})\b", title)
+        if m and m.group(1) not in out:
+            out[m.group(1)] = col
+    return out
+
+
+def build_title_to_col_map(title_map):
+    """título_normalizado -> col (preserva ambigüedad de títulos iguales)."""
+    return title_map.copy()
+
+
+def find_col_by_keywords(title_map, keywords):
+    for title, col in title_map.items():
+        if all(k in title for k in keywords):
+            return col
+    return None
+
+
+def canonical_eps(name):
+    n = normalize_text(name)
+    if "ALIANSALUD" in n:
+        return "ALIANSALUD"
+    if "SURA" in n:
+        return "SURA"
+    if "SALUD TOTAL" in n:
+        return "SALUD TOTAL"
+    if "SANITAS" in n:
+        return "SANITAS"
+    if "COMPENSAR" in n:
+        return "COMPENSAR"
+    if "FAMISANAR" in n:
+        return "FAMISANAR"
+    if "NUEVA" in n and "EPS" in n:
+        return "NUEVA EPS"
+    if "MUTUAL" in n:
+        return "MUTUAL"
+    return ""
+
+
+def canonical_afp(name):
+    n = normalize_text(name)
+    if "COLFONDOS" in n:
+        return "COLFONDOS"
+    if "COLPENSIONES" in n or "ADMINISTRADORA COLOMBIANA DE PENSIONES" in n:
+        return "COLPENSIONES"
+    if "OLD MUTUAL" in n or "SKANDIA" in n:
+        return "SKANDIA"
+    if "PORVENIR" in n:
+        return "PORVENIR"
+    if "PROTECCION" in n or "PROTECCION" in n:
+        return "PROTECCION"
+    return ""
+
+
+def build_ss_target_columns(ws, concept_row):
+    """Detecta columnas SS del formato destino por título, no por posición fija."""
+    titles = build_row_title_map(ws, concept_row)
+    eps_cols = {}
+    afp_pension_cols = {}
+    afp_fsp_cols = {}
+
+    for title, col in titles.items():
+        if "002205" in title:
+            if "ALIANSALUD" in title:
+                eps_cols["ALIANSALUD"] = col
+            elif "SURA" in title:
+                eps_cols["SURA"] = col
+            elif "SALUD TOTAL" in title:
+                eps_cols["SALUD TOTAL"] = col
+            elif "SANITAS" in title:
+                eps_cols["SANITAS"] = col
+            elif "COMPENSAR" in title:
+                eps_cols["COMPENSAR"] = col
+            elif "FAMISANAR" in title:
+                eps_cols["FAMISANAR"] = col
+            elif "NUEVA" in title:
+                eps_cols["NUEVA EPS"] = col
+            elif "MUTUAL" in title:
+                eps_cols["MUTUAL"] = col
+
+        if "002210" in title:
+            if "COLFONDOS" in title:
+                afp_pension_cols["COLFONDOS"] = col
+            elif "COLPENSIONES" in title:
+                afp_pension_cols["COLPENSIONES"] = col
+            elif "SKANDIA" in title or "OLD MUTUAL" in title:
+                afp_pension_cols["SKANDIA"] = col
+            elif "PORVENIR" in title:
+                afp_pension_cols["PORVENIR"] = col
+            elif "PROTECCION" in title:
+                afp_pension_cols["PROTECCION"] = col
+
+        if "002215" in title:
+            if "COLFONDOS" in title:
+                afp_fsp_cols["COLFONDOS"] = col
+            elif "COLPENSIONES" in title:
+                afp_fsp_cols["COLPENSIONES"] = col
+            elif "SKANDIA" in title or "OLD MUTUAL" in title:
+                afp_fsp_cols["SKANDIA"] = col
+            elif "PORVENIR" in title:
+                afp_fsp_cols["PORVENIR"] = col
+            elif "PROTECCION" in title:
+                afp_fsp_cols["PROTECCION"] = col
+
+    return eps_cols, afp_pension_cols, afp_fsp_cols
+
 # Formato1 col → Formato2 col  (columnas directas, sin SS 41/42/43)
 F1_TO_F2 = {
     2:2,  3:3,  6:4,  7:5,          # código, nombre, apellido 1, apellido 2
@@ -267,12 +456,23 @@ def process():
         wb1 = load_workbook(f1_file, data_only=True)
         ws1 = wb1.active
 
-        # 2. Detectar fila de inicio de datos (col 2 = código numérico)
+        # 2. Detectar filas de encabezado en archivo fuente
+        f1_base_row, f1_concept_row = detect_header_rows(ws1)
+        f1_base_titles = build_row_title_map(ws1, f1_base_row)
+        f1_concept_titles = build_row_title_map(ws1, f1_concept_row)
+        f1_codes = build_concept_code_map(f1_concept_titles)
+
+        src_code_col = find_col_by_keywords(f1_base_titles, ["CODIGO"]) or 2
+        src_nombre_col = find_col_by_keywords(f1_base_titles, ["NOMBRE"]) or 3
+        src_ap1_col = find_col_by_keywords(f1_base_titles, ["APELLIDO", "1"]) or 6
+        src_ap2_col = find_col_by_keywords(f1_base_titles, ["APELLIDO", "2"]) or 7
+
+        # 3. Detectar fila de inicio de datos usando columna de código detectada
         data_start = None
         for row in ws1.iter_rows(min_row=1, max_row=ws1.max_row):
-            v = row[1].value  # col B (índice 0 → col 2)
+            v = row[src_code_col - 1].value
             if v and str(v).strip().replace(" ", "").isdigit() and len(str(v).strip()) >= 4:
-                data_start = row[1].row
+                data_start = row[src_code_col - 1].row
                 break
         if data_start is None:
             return jsonify({"error": "No se encontraron filas de empleados en el reporte."}), 400
@@ -280,7 +480,7 @@ def process():
         # Recoger filas de empleados
         emp_rows = []
         for r in range(data_start, ws1.max_row + 1):
-            v = get_val(ws1, 2, r)
+            v = get_val(ws1, src_code_col, r)
             if v is None:
                 break
             s = str(v).strip()
@@ -288,18 +488,97 @@ def process():
                 break
             emp_rows.append(r)
 
-        # 3. Abrir plantilla formato2 (preserva TODO el formato con openpyxl)
+        # 4. Abrir plantilla formato2 (preserva TODO el formato con openpyxl)
         template_path = os.path.join(BASE, "formato2.xlsx")
         wb2 = load_workbook(template_path)
         ws2 = wb2.active
+
+        # Detectar encabezados del formato destino
+        f2_base_row, f2_concept_row = detect_header_rows(ws2)
+        f2_base_titles = build_row_title_map(ws2, f2_base_row)
+        f2_concept_titles = build_row_title_map(ws2, f2_concept_row)
+        f2_codes = build_concept_code_map(f2_concept_titles)
+
+        dst_code_col = find_col_by_keywords(f2_base_titles, ["CODIGO"]) or 2
+        dst_nombre_col = find_col_by_keywords(f2_base_titles, ["NOMBRE"]) or 3
+        dst_ap1_col = find_col_by_keywords(f2_base_titles, ["APELLIDO", "1"]) or 4
+        dst_ap2_col = find_col_by_keywords(f2_base_titles, ["APELLIDO", "2"]) or 5
+
+        # Códigos especiales SS y totales
+        src_ss_salud_col = f1_codes.get("002205") or 41
+        src_ss_pension_col = f1_codes.get("002210") or 42
+        src_ss_fsp_col = f1_codes.get("002215") or 43
+        src_neto_col = f1_codes.get("999901") or 61
+        
+        # Buscar totales por título en fila BASE (no en conceptos detallados)
+        src_devengo_total_col = find_col_by_keywords(f1_base_titles, ["DEVENGO"]) or None
+        src_dedu_total_col = (find_col_by_keywords(f1_base_titles, ["DEDUCCION"]) or 
+                              find_col_by_keywords(f1_base_titles, ["DESCUENTO"]) or None)
+
+        dst_ss_salud_col = f2_codes.get("002205") or 29
+        dst_neto_col = f2_codes.get("999901") or 64
+        
+        # Buscar totales en destino por título en fila BASE
+        dst_devengo_total_col = find_col_by_keywords(f2_base_titles, ["DEVENGO"]) or 28
+        dst_dedu_total_col = (find_col_by_keywords(f2_base_titles, ["DEDUCCION"]) or 
+                              find_col_by_keywords(f2_base_titles, ["DESCUENTO"]) or 63)
+
+        eps_target_cols, afp_pension_target_cols, afp_fsp_target_cols = build_ss_target_columns(ws2, f2_concept_row)
+
+        # Mapeo dinámico por título (no solo código) para soportar duplicados como 001050
+        # Primero: mapear por título normalizado exacto
+        f1_concept_titles_to_col = build_title_to_col_map(f1_concept_titles)
+        f2_concept_titles_to_col = build_title_to_col_map(f2_concept_titles)
+        
+        skip_titles_prefixes = ("002205", "002210", "002215")
+        skip_keywords = ("DEVENGO", "DEDUCCION", "DESCUENTO")
+        dynamic_map = {}
+        
+        # Por cada título en origen, buscar exacto en destino o por código
+        for f1_title, f1_col in f1_concept_titles_to_col.items():
+            # Saltar SS (se rutean por entidad)
+            if any(f1_title.startswith(p) for p in skip_titles_prefixes):
+                continue
+            # Saltar totales (se mapean explícitamente)
+            if any(k in f1_title for k in skip_keywords):
+                continue
+            
+            # Buscar el mismo título en destino
+            if f1_title in f2_concept_titles_to_col:
+                dynamic_map[f1_col] = f2_concept_titles_to_col[f1_title]
+            else:
+                # Fallback: mapear por código si no hay título exacto
+                code_match = re.search(r"\b(\d{6})\b", f1_title)
+                if code_match:
+                    code = code_match.group(1)
+                    for f2_title, f2_col in f2_concept_titles_to_col.items():
+                        if re.search(r"\b" + re.escape(code) + r"\b", f2_title):
+                            dynamic_map[f1_col] = f2_col
+                            break
+
+        # Campos base
+        dynamic_map[src_code_col] = dst_code_col
+        dynamic_map[src_nombre_col] = dst_nombre_col
+        dynamic_map[src_ap1_col] = dst_ap1_col
+        dynamic_map[src_ap2_col] = dst_ap2_col
+
+        # Totales por posición relativa a SS/NETO
+        if src_devengo_total_col and dst_devengo_total_col:
+            dynamic_map[src_devengo_total_col] = dst_devengo_total_col
+        if src_dedu_total_col and dst_dedu_total_col:
+            dynamic_map[src_dedu_total_col] = dst_dedu_total_col
+
+        # Segundo NETO (se preserva compatibilidad cuando existe columna adicional)
+        if src_neto_col and dst_neto_col and (src_neto_col + 1) <= ws1.max_column and (dst_neto_col + 1) <= ws2.max_column:
+            dynamic_map[src_neto_col + 1] = dst_neto_col + 1
 
         summary = []
         warnings = []
         f2_row = 25  # fila de inicio de datos en formato2
 
-        # 4. Procesar cada empleado
+        # 5. Procesar cada empleado
         for f1r in emp_rows:
-            raw_code = get_val(ws1, 2, f1r)
+            raw_code = get_val(ws1, src_code_col, f1r)
             code = normalize_code(raw_code)
             master = load_maestro().get(code)
 
@@ -309,22 +588,22 @@ def process():
             if not master:
                 warnings.append(f"Sin maestro: {code}")
 
-            # --- Copiar todas las columnas mapeadas ---
-            for f1c, f2c in F1_TO_F2.items():
+            # --- Copiar columnas detectadas por título/código ---
+            for f1c, f2c in dynamic_map.items():
                 val = get_val(ws1, f1c, f1r)
                 if val is not None:
                     set_val(ws2, f2c, f2_row, val)
-            # Código normalizado (sobrescribe col 2 con el formato correcto)
-            set_val(ws2, 2, f2_row, code)
+            # Código normalizado (sobrescribe con el formato correcto)
+            set_val(ws2, dst_code_col, f2_row, code)
 
             # --- Valores SS ---
-            v_salud   = get_val(ws1, 41, f1r) or 0
-            v_pension = get_val(ws1, 42, f1r) or 0
-            v_fsp     = get_val(ws1, 43, f1r) or 0
+            v_salud   = get_val(ws1, src_ss_salud_col, f1r) or 0
+            v_pension = get_val(ws1, src_ss_pension_col, f1r) or 0
+            v_fsp     = get_val(ws1, src_ss_fsp_col, f1r) or 0
 
             # Rutear Salud
             if eps and v_salud:
-                sc = EPS_COL.get(eps)
+                sc = eps_target_cols.get(canonical_eps(eps))
                 if sc:
                     set_val(ws2, sc, f2_row, v_salud)
                 else:
@@ -332,7 +611,7 @@ def process():
 
             # Rutear Pensión
             if afp and v_pension:
-                pc = AFP_PENSION_COL.get(afp)
+                pc = afp_pension_target_cols.get(canonical_afp(afp))
                 if pc:
                     set_val(ws2, pc, f2_row, v_pension)
                 else:
@@ -340,13 +619,13 @@ def process():
 
             # Rutear FSP
             if afp and v_fsp:
-                fc = AFP_FSP_COL.get(afp)
+                fc = afp_fsp_target_cols.get(canonical_afp(afp))
                 if fc:
                     set_val(ws2, fc, f2_row, v_fsp)
                 else:
                     warnings.append(f"AFP/FSP no mapeada: '{afp}' ({code})")
 
-            nombre = f"{get_val(ws1,6,f1r) or ''} {get_val(ws1,7,f1r) or ''}, {get_val(ws1,3,f1r) or ''}".strip()
+            nombre = f"{get_val(ws1,src_ap1_col,f1r) or ''} {get_val(ws1,src_ap2_col,f1r) or ''}, {get_val(ws1,src_nombre_col,f1r) or ''}".strip()
             summary.append({
                 "code": code,
                 "nombre": nombre,
@@ -359,7 +638,7 @@ def process():
             })
             f2_row += 1
 
-        # 5. Escribir a buffer y devolver
+        # 6. Escribir a buffer y devolver
         buf = io.BytesIO()
         wb2.save(buf)
         buf.seek(0)
