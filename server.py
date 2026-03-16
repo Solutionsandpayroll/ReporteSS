@@ -509,19 +509,33 @@ def process():
         src_ss_pension_col = f1_codes.get("002210") or 42
         src_ss_fsp_col = f1_codes.get("002215") or 43
         src_neto_col = f1_codes.get("999901") or 61
-        
-        # Buscar totales por título en fila BASE (no en conceptos detallados)
-        src_devengo_total_col = find_col_by_keywords(f1_base_titles, ["DEVENGO"]) or None
-        src_dedu_total_col = (find_col_by_keywords(f1_base_titles, ["DEDUCCION"]) or 
-                              find_col_by_keywords(f1_base_titles, ["DESCUENTO"]) or None)
+
+        # Totales: prioridad por posición relativa (estable entre variantes conocidas).
+        # Evita usar cabecera base DEDUCCION cuando coincide con 002205 (causa duplicado en EPS).
+        src_devengo_total_col = (src_ss_salud_col - 1) if src_ss_salud_col and src_ss_salud_col > 1 else None
+        src_dedu_total_col = (src_neto_col - 1) if src_neto_col and src_neto_col > 1 else None
+
+        src_base_dev = find_col_by_keywords(f1_base_titles, ["DEVENGO"])
+        src_base_ded = (find_col_by_keywords(f1_base_titles, ["DEDUCCION"]) or
+                        find_col_by_keywords(f1_base_titles, ["DESCUENTO"]))
+        if src_devengo_total_col is None:
+            src_devengo_total_col = src_base_dev
+        if src_dedu_total_col is None:
+            src_dedu_total_col = src_base_ded
 
         dst_ss_salud_col = f2_codes.get("002205") or 29
         dst_neto_col = f2_codes.get("999901") or 64
-        
-        # Buscar totales en destino por título en fila BASE
-        dst_devengo_total_col = find_col_by_keywords(f2_base_titles, ["DEVENGO"]) or 28
-        dst_dedu_total_col = (find_col_by_keywords(f2_base_titles, ["DEDUCCION"]) or 
-                              find_col_by_keywords(f2_base_titles, ["DESCUENTO"]) or 63)
+
+        dst_devengo_total_col = (dst_ss_salud_col - 1) if dst_ss_salud_col and dst_ss_salud_col > 1 else None
+        dst_dedu_total_col = (dst_neto_col - 1) if dst_neto_col and dst_neto_col > 1 else None
+
+        dst_base_dev = find_col_by_keywords(f2_base_titles, ["DEVENGO"])
+        dst_base_ded = (find_col_by_keywords(f2_base_titles, ["DEDUCCION"]) or
+                        find_col_by_keywords(f2_base_titles, ["DESCUENTO"]))
+        if dst_devengo_total_col is None:
+            dst_devengo_total_col = dst_base_dev or 28
+        if dst_dedu_total_col is None:
+            dst_dedu_total_col = dst_base_ded or 63
 
         eps_target_cols, afp_pension_target_cols, afp_fsp_target_cols = build_ss_target_columns(ws2, f2_concept_row)
 
