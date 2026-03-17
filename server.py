@@ -323,6 +323,19 @@ def find_col_by_keywords(title_map, keywords):
     return None
 
 
+def is_total_summary_title(title):
+    """True cuando el titulo representa un total/resumen, no un concepto codificado."""
+    if not title:
+        return False
+    # Si tiene codigo de concepto (6 digitos), no es un total generico.
+    if re.search(r"\b\d{6}\b", title):
+        return False
+    tokens = title.split()
+    if not tokens:
+        return False
+    return tokens[0] in ("DEVENGO", "DEDUCCION", "DESCUENTO")
+
+
 def canonical_eps(name):
     n = normalize_text(name)
     if "ALIANSALUD" in n:
@@ -545,7 +558,6 @@ def process():
         f2_concept_titles_to_col = build_title_to_col_map(f2_concept_titles)
         
         skip_titles_prefixes = ("002205", "002210", "002215")
-        skip_keywords = ("DEVENGO", "DEDUCCION", "DESCUENTO")
         dynamic_map = {}
         
         # Por cada título en origen, buscar exacto en destino o por código
@@ -554,7 +566,7 @@ def process():
             if any(f1_title.startswith(p) for p in skip_titles_prefixes):
                 continue
             # Saltar totales (se mapean explícitamente)
-            if any(k in f1_title for k in skip_keywords):
+            if is_total_summary_title(f1_title):
                 continue
             
             # Buscar el mismo título en destino
